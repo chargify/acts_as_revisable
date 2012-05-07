@@ -279,17 +279,17 @@ module WithoutScope
       end
       
       # acts_as_revisable's override for ActiveRecord::Base's #save!
-      def save!(*args) #:nodoc:
-        self.revisable_new_params ||= args.extract_options!
+      def save!(options={}) #:nodoc:
+        self.revisable_new_params ||= options
         self.no_revision! if self.revisable_new_params.delete :without_revision
-        super
+        super(options)
       end
       
-      # acts_as_revisable's override for ActiveRecord::Base's #save  
-      def save(*args) #:nodoc:
-        self.revisable_new_params ||= args.extract_options!
+      # acts_as_revisable's override for ActiveRecord::Base's #save
+      def save(options={}) #:nodoc:
+        self.revisable_new_params ||= options
         self.no_revision! if self.revisable_new_params.delete :without_revision
-        super(args)
+        super(options)
       end
       
       # Set some defaults for a newly created +Revisable+ instance.
