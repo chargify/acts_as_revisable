@@ -20,8 +20,8 @@ describe WithoutScope::ActsAsRevisable do
     @project.revisions.size.should == 3
   end
 
-  it "should allow :with_revisions key for associations" do
+  it "should allow with_revisions chain method for associations" do
     Person.create(:name => "Peter", :project => @project)
-    lambda { @project.people.find(:first, :with_revisions => true) }.should_not raise_error
+    lambda { @project.people.with_revisions.first }.should_not raise_error
   end
 end

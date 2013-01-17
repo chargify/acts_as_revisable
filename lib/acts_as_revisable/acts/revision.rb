@@ -45,10 +45,14 @@ module WithoutScope
       
       # Return the revision prior to this one.
       def previous_revision
-        self.class.find(:first, :conditions => {:revisable_original_id => revisable_original_id, :revisable_number => revisable_number - 1})
+        self.class.where(
+          :revisable_original_id => revisable_original_id,
+          :revisable_number => revisable_number - 1
+        ).limit(1)
       end
       
       # Return the revision after this one.
+      # TODO: Update to new syntax
       def next_revision
         self.class.find(:first, :conditions => {:revisable_original_id => revisable_original_id, :revisable_number => revisable_number + 1})
       end

@@ -80,11 +80,16 @@ module WithoutScope
         when :previous, :last
           revisions.first
         when Time
-          revisions.find(:first, :conditions => ["? >= ? and ? <= ?", :revisable_revised_at, by, :revisable_current_at, by])
+          revisions.where(
+            ":revised_at >= :by and :current_at <= :by", {
+              :revised_at => :revisable_revised_at,
+              :by         => by,
+              :current_at => :revisable_current_at
+          }).limit(1)
         when self.revisable_number
           self
         else
-          revisions.find_by_revisable_number(by)
+          revisions.where(:revisable_number => by)
         end
       end
 
@@ -407,25 +412,31 @@ module WithoutScope
       end
 
       module ClassMethods
-        # acts_as_revisable's override for with_scope that allows for
-        # including revisions in the scope.
-        # 
-        # ==== Example
-        # 
-        #   with_scope(:with_revisions => true) do
-        #     ...
-        #   end
-        def with_scope(*args, &block) #:nodoc:
-          options = (args.grep(Hash).first || {})[:find]
+        def with_revisions
+          #TODO: something like:
+          # self.revision_class.where(self.current_scope)
 
-          if options && options.delete(:with_revisions)
-            unscoped do
-              super(*args, &block)
-            end
+          if scope = self.current_scope
+            conditions = scope.where_values_hash
+            conditions.delete(:revisable_is_current) if conditions.has_key?(:revisable_is_current)
+            scope + self.revision_class.where(conditions)
           else
-            super(*args, &block)
+            self
           end
+
         end
+
+        #def with_scope(*args, &block) #:nodoc:
+          #options = (args.grep(Hash).first || {})[:find]
+
+          #if options && options.delete(:with_revisions)
+            #unscoped do
+              #super(*args, &block)
+            #end
+          #else
+            #super(*args, &block)
+          #end
+        #end
 
         # acts_as_revisable's override for find that allows for
         # including revisions in the find.
@@ -433,17 +444,17 @@ module WithoutScope
         # ==== Example
         # 
         #   find(:all, :with_revisions => true)
-        def find(*args) #:nodoc:
-          options = args.grep(Hash).first
+        #def find(*args) #:nodoc:
+          #options = args.grep(Hash).first
 
-          if options && options.delete(:with_revisions)
-            unscoped do
-              super(*args)
-            end
-          else
-            super(*args)
-          end
-        end
+          #if options && options.delete(:with_revisions)
+            #unscoped do
+              #super(*args)
+            #end
+          #else
+            #super(*args)
+          #end
+        #end
 
         # Returns the +revision_class_name+ as configured in
         # +acts_as_revisable+.
