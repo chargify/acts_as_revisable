@@ -85,11 +85,11 @@ module WithoutScope
               :revised_at => :revisable_revised_at,
               :by         => by,
               :current_at => :revisable_current_at
-          }).limit(1)
+          }).first
         when self.revisable_number
           self
         else
-          revisions.where(:revisable_number => by)
+          revisions.where(:revisable_number => by).first
         end
       end
 
