@@ -15,14 +15,14 @@ describe WithoutScope::ActsAsRevisable, "with branching" do
   end
 
   it "should allow for branch creation" do
-    @project.should == @project.branch.branch_source
+    [@project].should == @project.branch.branch_source
   end
 
   it "should always tie the branch to the correct version" do
     b = @project.branch!
     @project.revise!
     prev = @project.find_revision(:last)
-    b.reload.branch_source.should == prev
+    b.reload.branch_source.should == [prev]
   end
 
   it "should have branches" do

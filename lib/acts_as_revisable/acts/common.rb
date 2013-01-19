@@ -100,7 +100,7 @@ module WithoutScope
 
       def branch_source
         self[:branch_source] ||= if self[:revisable_branched_from_id]
-          self.class.where(:id => self[:revisable_branched_from_id]).with_revisions.first
+          self.class.where(:id => self[:revisable_branched_from_id]).with_revisions
         else
           nil
         end
