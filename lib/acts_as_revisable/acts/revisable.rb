@@ -34,7 +34,7 @@ module WithoutScope
           after_update :after_revisable_update
           after_save :clear_revisable_shared_objects!, :unless => :is_reverting?
 
-          default_scope :conditions => {:revisable_is_current => true}
+          default_scope { where(:revisable_is_current => true) }
 
           [:revisions, revisions_association_name.to_sym].each do |assoc|
             has_many assoc, (revisable_options.revision_association_options || {}).merge({:class_name => revision_class_name, :foreign_key => :revisable_original_id, :order => "#{quoted_table_name}.#{connection.quote_column_name(:revisable_number)} DESC", :dependent => :destroy})
