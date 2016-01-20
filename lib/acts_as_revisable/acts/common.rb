@@ -20,7 +20,7 @@ module WithoutScope
 
         base.instance_eval do
           define_callbacks :before_branch, :after_branch
-          has_many :branches, (revisable_options.revision_association_options || {}).merge({:class_name => base.name, :foreign_key => :revisable_branched_from_id})
+          has_many :branches, (revisable_options.revision_association_options || {}).merge(class_name: base.name, foreign_key: :revisable_branched_from_id)
 
           after_save :execute_blocks_after_save
         end
@@ -183,12 +183,12 @@ module WithoutScope
         # acts_as_revisable's override for instantiate so we can
         # return the appropriate type of model based on whether
         # or not the record is the current record.
-        def instantiate(record) #:nodoc:
+        def instantiate(record, column_types = {}) #:nodoc:
           is_current = columns_hash["revisable_is_current"].type_cast(
                 record["revisable_is_current"])
 
           if (is_current && self == self.revisable_class) || (!is_current && self == self.revision_class)
-            return super(record)
+            return super(record, column_types)
           end
 
           object = if is_current
