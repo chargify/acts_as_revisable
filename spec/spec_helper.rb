@@ -2,6 +2,7 @@ $:.unshift File.expand_path('../lib', File.dirname(__FILE__))
 
 require 'acts_as_revisable'
 require 'rspec'
+require 'pry'
 
 ActiveRecord::Base.establish_connection(:adapter => "sqlite3", :database => ":memory:")
 

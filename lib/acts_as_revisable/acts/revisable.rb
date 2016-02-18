@@ -2,9 +2,9 @@ module WithoutScope
   module ActsAsRevisable
 
     # This module is mixed into the revision classes.
-    # 
+    #
     # ==== Callbacks
-    # 
+    #
     # * +before_revise+ is called before the record is revised.
     # * +after_revise+ is called after the record is revised.
     # * +before_revert+ is called before the record is reverted.
@@ -34,10 +34,10 @@ module WithoutScope
           after_update :after_revisable_update
           after_save :clear_revisable_shared_objects!, :unless => :is_reverting?
 
-          default_scope :conditions => {:revisable_is_current => true}
+          default_scope { where(revisable_is_current: true) }
 
           [:revisions, revisions_association_name.to_sym].each do |assoc|
-            has_many assoc, (revisable_options.revision_association_options || {}).merge({:class_name => revision_class_name, :foreign_key => :revisable_original_id, :order => "#{quoted_table_name}.#{connection.quote_column_name(:revisable_number)} DESC", :dependent => :destroy})
+            has_many assoc, -> { order("#{quoted_table_name}.#{connection.quote_column_name(:revisable_number)} DESC") }, (revisable_options.revision_association_options || {}).merge(class_name: revision_class_name, foreign_key: :revisable_original_id, dependent: :destroy)
           end
         end
 
@@ -49,22 +49,22 @@ module WithoutScope
       end
 
       # Finds a specific revision of self.
-      # 
-      # The +by+ parameter can be a revision_class instance, 
+      #
+      # The +by+ parameter can be a revision_class instance,
       # the symbols :first, :previous or :last, a Time instance
       # or an Integer.
-      # 
+      #
       # When passed a revision_class instance, this method
       # simply returns it. This is used primarily by revert_to!.
-      # 
+      #
       # When passed :first it returns the first revision created.
-      # 
+      #
       # When passed :previous or :last it returns the last revision
       # created.
-      # 
+      #
       # When passed a Time instance it returns the revision that
       # was the current record at the given time.
-      # 
+      #
       # When passed an Integer it returns the revision with that
       # revision_number.
       def find_revision(by)
@@ -80,28 +80,33 @@ module WithoutScope
         when :previous, :last
           revisions.first
         when Time
-          revisions.find(:first, :conditions => ["? >= ? and ? <= ?", :revisable_revised_at, by, :revisable_current_at, by])
+          revisions.where(
+            ":revised_at >= :by and :current_at <= :by", {
+              :revised_at => :revisable_revised_at,
+              :by         => by,
+              :current_at => :revisable_current_at
+          }).first
         when self.revisable_number
           self
         else
-          revisions.find_by_revisable_number(by)
+          revisions.where(:revisable_number => by).first
         end
       end
 
       # Returns a revisable_class instance initialized with the record
       # found using find_revision.
-      # 
+      #
       # The +what+ parameter is simply passed to find_revision and the
       # returned record forms the basis of the reverted record.
-      # 
+      #
       # ==== Callbacks
-      # 
+      #
       # * +before_revert+ is called before the record is reverted.
       # * +after_revert+ is called after the record is reverted.
-      # 
-      # If :without_revision => true has not been passed the 
+      #
+      # If :without_revision => true has not been passed the
       # following callbacks are also called:
-      # 
+      #
       # * +before_revise+ is called before the record is revised.
       # * +after_revise+ is called after the record is revised.
       def revert_to(what, *args, &block) #:yields:
@@ -165,7 +170,7 @@ module WithoutScope
         set_revisable_state(:reverting, val)
       end
 
-      # Returns true if the _record_ (not just this instance 
+      # Returns true if the _record_ (not just this instance
       # of the record) is currently being reverted.
       def is_reverting?
         get_revisable_state(:reverting) || false
@@ -193,13 +198,13 @@ module WithoutScope
 
       # Force an immediate revision whether or
       # not any columns have been modified.
-      # 
+      #
       # The +args+ catch-all argument is not used. It's primarily
       # there to allow +revise!+ to be used directly as an association
       # callback since association callbacks are passed an argument.
-      # 
+      #
       # ==== Callbacks
-      # 
+      #
       # * +before_revise+ is called before the record is revised.
       # * +after_revise+ is called after the record is revised.
       def revise!(*args)
@@ -222,7 +227,7 @@ module WithoutScope
       #
       #   @project.revision_number # => 1
       #   @project.changeset do |project|
-      #     # each one of the following statements would 
+      #     # each one of the following statements would
       #     # normally trigger a revision
       #     project.update_attribute(:name, "new name")
       #     project.revise!
@@ -230,11 +235,11 @@ module WithoutScope
       #   end
       #   @project.save
       #   @project.revision_number # => 2
-      # 
+      #
       # ==== Callbacks
-      # 
+      #
       # * +before_changeset+ is called before a changeset block is called.
-      # * +after_changeset+ is called after a changeset block is called.      
+      # * +after_changeset+ is called after a changeset block is called.
       def changeset(&block)
         return unless block_given?
 
@@ -252,7 +257,7 @@ module WithoutScope
             run_callbacks(:after_changeset)
           end
         ensure
-          in_revision!(false)       
+          in_revision!(false)
         end
       end
 
@@ -325,7 +330,7 @@ module WithoutScope
       # Checks if an initialized revision_class has been stored
       # in the accessor. If it has been, this instance is saved.
       def after_revisable_update #:nodoc:
-        if no_revision? # check and see if no_revision! was called in a callback 
+        if no_revision? # check and see if no_revision! was called in a callback
           self.revisable_revision = nil
           return true
         elsif self.revisable_revision
@@ -338,13 +343,13 @@ module WithoutScope
         true
       end
 
-      # Returns true if the _record_ (not just this instance 
+      # Returns true if the _record_ (not just this instance
       # of the record) is currently being revised.
       def in_revision?
         get_revisable_state(:revision)
       end
 
-      # Manages the internal state of a +Revisable+ controlling 
+      # Manages the internal state of a +Revisable+ controlling
       # whether or not a record is being revised. This works across
       # instances and is keyed on primary_key.
       def in_revision!(val=true) #:nodoc:
@@ -407,43 +412,49 @@ module WithoutScope
       end
 
       module ClassMethods
-        # acts_as_revisable's override for with_scope that allows for
-        # including revisions in the scope.
-        # 
-        # ==== Example
-        # 
-        #   with_scope(:with_revisions => true) do
-        #     ...
-        #   end
-        def with_scope(*args, &block) #:nodoc:
-          options = (args.grep(Hash).first || {})[:find]
+        def with_revisions
+          #TODO: something like:
+          # self.revision_class.where(self.current_scope)
 
-          if options && options.delete(:with_revisions)
-            unscoped do
-              super(*args, &block)
-            end
+          if scope = self.current_scope
+            conditions = scope.where_values_hash
+            conditions.delete(:revisable_is_current) if conditions.has_key?(:revisable_is_current)
+            scope + self.revision_class.where(conditions)
           else
-            super(*args, &block)
+            self
           end
+
         end
+
+        #def with_scope(*args, &block) #:nodoc:
+          #options = (args.grep(Hash).first || {})[:find]
+
+          #if options && options.delete(:with_revisions)
+            #unscoped do
+              #super(*args, &block)
+            #end
+          #else
+            #super(*args, &block)
+          #end
+        #end
 
         # acts_as_revisable's override for find that allows for
         # including revisions in the find.
-        # 
+        #
         # ==== Example
-        # 
+        #
         #   find(:all, :with_revisions => true)
-        def find(*args) #:nodoc:
-          options = args.grep(Hash).first
+        #def find(*args) #:nodoc:
+          #options = args.grep(Hash).first
 
-          if options && options.delete(:with_revisions)
-            unscoped do
-              super(*args)
-            end
-          else
-            super(*args)
-          end
-        end
+          #if options && options.delete(:with_revisions)
+            #unscoped do
+              #super(*args)
+            #end
+          #else
+            #super(*args)
+          #end
+        #end
 
         # Returns the +revision_class_name+ as configured in
         # +acts_as_revisable+.
@@ -451,7 +462,7 @@ module WithoutScope
           self.revisable_options.revision_class_name || "#{self.name}Revision"
         end
 
-        # Returns the actual +Revision+ class based on the 
+        # Returns the actual +Revision+ class based on the
         # #revision_class_name.
         def revision_class #:nodoc:
           self.revisable_revision_class ||= self.revision_class_name.constantize
