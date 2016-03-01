@@ -11,7 +11,6 @@ RSpec.configure do |config|
   config.run_all_when_everything_filtered = true
   config.alias_example_to :fit, :focused => true
   config.alias_example_to :xit, :disabled => true
-  config.color_enabled = true
 
   # so we can use `:vcr` rathaner than `:vcr => true`;
   # in RSpec 3 this will no longer be necessary.
