@@ -309,7 +309,7 @@ module WithoutScope
         return true if force_revision?
         return false if no_revision?
         return false unless self.changed?
-        !(self.changed.map(&:downcase) & self.class.revisable_watch_columns).blank?
+        (self.changed.map(&:downcase) & self.class.revisable_watch_columns).present?
       end
 
       # Checks whether or not a revision should be stored.
@@ -321,7 +321,6 @@ module WithoutScope
 
         unless run_callbacks(:before_revise)
           in_revision!(false)
-          return false
         end
 
         self.revisable_revision = self.to_revision
