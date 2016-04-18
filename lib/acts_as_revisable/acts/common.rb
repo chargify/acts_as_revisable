@@ -184,7 +184,10 @@ module WithoutScope
         # return the appropriate type of model based on whether
         # or not the record is the current record.
         def instantiate(record, column_types = {}) #:nodoc:
-          is_current = columns_hash["revisable_is_current"].type_cast(
+          # Assume, perhaps naively that record is_current of there is no `revisable_is_current`
+          # We do this so we can things like `Product.select("id")` without having to do
+          # `Product.select("id, revisable_is_current")`
+          is_current = !record["revisable_is_current"] || columns_hash["revisable_is_current"].type_cast(
                 record["revisable_is_current"])
 
           if (is_current && self == self.revisable_class) || (!is_current && self == self.revision_class)
