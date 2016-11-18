@@ -413,17 +413,16 @@ module WithoutScope
 
       module ClassMethods
         def with_revisions
-          #TODO: something like:
+          # TODO: something like:
           # self.revision_class.where(self.current_scope)
 
-          if scope = self.current_scope
+          if scope = current_scope
             conditions = scope.where_values_hash
-            conditions.delete(:revisable_is_current) if conditions.has_key?(:revisable_is_current)
-            scope + self.revision_class.where(conditions)
+            conditions.delete("revisable_is_current") if conditions.has_key?("revisable_is_current")
+            scope + revision_class.where(conditions)
           else
             self
           end
-
         end
 
         #def with_scope(*args, &block) #:nodoc:

@@ -99,9 +99,9 @@ module WithoutScope
       end
 
       def branch_source
-        self[:branch_source] ||= \
-          if self[:revisable_branched_from_id]
-            self.class.where(id: self[:revisable_branched_from_id]).with_revisions
+        @branch_source ||= \
+          if revisable_branched_from_id
+            self.class.where(id: revisable_branched_from_id).with_revisions
           end
       end
 
