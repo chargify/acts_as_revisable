@@ -107,7 +107,7 @@ class Foo < ActiveRecord::Base
 end
 
 class Post < ActiveRecord::Base
-  acts_as_revisable 
+  acts_as_revisable
 
   validates_uniqueness_of :name
 end
