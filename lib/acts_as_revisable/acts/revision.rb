@@ -27,14 +27,14 @@ module WithoutScope
           scope :deleted, -> { where("? is not null", :revisable_deleted_at) }
 
           [:current_revision, revisable_association_name.to_sym].each do |a|
-            belongs_to a, :class_name => revisable_class_name, :foreign_key => :revisable_original_id
+            belongs_to a, class_name: revisable_class_name, foreign_key: :revisable_original_id
           end
 
-          [[:ancestors, "<"], [:descendants, ">"]].each do |a|
+          [[:ancestors, '<'], [:descendants, '>']].each do |a|
             # Jumping through hoops here to try and make sure the
             # :finder_sql is cross-database compatible. :finder_sql
             # in a plugin is evil but, I see no other option.
-            has_many a.first, -> { where("select * from #{quoted_table_name} where #{quote_bound_value(:revisable_original_id)} = \#{revisable_original_id} and #{quote_bound_value(:revisable_number)} #{a.last} \#{revisable_number} and #{quote_bound_value(:revisable_is_current)} = #{quote_value(false)} order by #{quote_bound_value(:revisable_number)} #{(a.last.eql?("<") ? "DESC" : "ASC")}") }, :class_name => revision_class_name
+            has_many a.first, -> { where("select * from #{quoted_table_name} where #{quote_bound_value(:revisable_original_id)} = \#{revisable_original_id} and #{quote_bound_value(:revisable_number)} #{a.last} \#{revisable_number} and #{quote_bound_value(:revisable_is_current)} = #{quote_value(false)} order by #{quote_bound_value(:revisable_number)} #{(a.last == '<' ? 'DESC' : 'ASC')}") }, class_name: revision_class_name
           end
         end
       end
