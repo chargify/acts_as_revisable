@@ -27,7 +27,10 @@ module WithoutScope
         base.instance_eval do
           attr_accessor :revisable_new_params, :revisable_revision
 
-          define_callbacks :before_revise, :after_revise, :before_revert, :after_revert, :before_changeset, :after_changeset, :after_branch_created
+          define_callbacks  :before_revise, :after_revise,
+                            :before_revert, :after_revert,
+                            :before_changeset, :after_changeset,
+                            :after_branch_created
 
           before_create :before_revisable_create
           before_update :before_revisable_update
@@ -352,7 +355,7 @@ module WithoutScope
       # Manages the internal state of a +Revisable+ controlling
       # whether or not a record is being revised. This works across
       # instances and is keyed on primary_key.
-      def in_revision!(val=true) #:nodoc:
+      def in_revision!(val = true) #:nodoc:
         set_revisable_state(:revision, val)
       end
 
