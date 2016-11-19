@@ -57,7 +57,7 @@ module WithoutScope
       def branch(*args, &block)
         is_branching!
 
-        unless run_callbacks(:before_branch) { |r| r.nil? }
+        unless run_callbacks(:before_branch).nil?
           raise ActiveRecord::RecordNotSaved
         end
 
