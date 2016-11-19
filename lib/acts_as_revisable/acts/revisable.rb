@@ -31,14 +31,17 @@ module WithoutScope
 
           before_create :before_revisable_create
           before_update :before_revisable_update
-          after_update :after_revisable_update
-          after_save :clear_revisable_shared_objects!, :unless => :is_reverting?
+          after_update  :after_revisable_update
+          after_save    :clear_revisable_shared_objects!, unless: :is_reverting?
+
+          has_many  :revisions,
+                    -> { order(revisable_number: :desc) },
+                    (revisable_options.revision_association_options || {}).merge(class_name: revision_class_name, foreign_key: :revisable_original_id, dependent: :destroy)
+          has_many  revisions_association_name.to_sym,
+                    -> { order(revisable_number: :desc) },
+                    (revisable_options.revision_association_options || {}).merge(class_name: revision_class_name, foreign_key: :revisable_original_id, dependent: :destroy)
 
           default_scope { where(revisable_is_current: true) }
-
-          [:revisions, revisions_association_name.to_sym].each do |assoc|
-            has_many assoc, -> { order("#{quoted_table_name}.#{connection.quote_column_name(:revisable_number)} DESC") }, (revisable_options.revision_association_options || {}).merge(class_name: revision_class_name, foreign_key: :revisable_original_id, dependent: :destroy)
-          end
         end
 
         if !Object.const_defined?(base.revision_class_name) && base.revisable_options.generate_revision_class?

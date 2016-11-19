@@ -20,12 +20,16 @@ module WithoutScope
           self.table_name = revisable_class.table_name
 
           define_callbacks :before_restore, :after_restore
-          before_create :revision_setup
-          after_create :grab_my_branches
 
-          [:current_revision, revisable_association_name.to_sym].each do |a|
-            belongs_to a, class_name: revisable_class_name, foreign_key: :revisable_original_id
-          end
+          before_create :revision_setup
+          after_create  :grab_my_branches
+
+          belongs_to  :current_revision,
+                      class_name: revisable_class_name,
+                      foreign_key: :revisable_original_id
+          belongs_to  revisable_association_name.to_sym,
+                      class_name: revisable_class_name,
+                      foreign_key: :revisable_original_id
 
           has_many  :ancestors,
                     -> (object) {
