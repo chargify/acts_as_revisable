@@ -428,35 +428,35 @@ module WithoutScope
           end
         end
 
-        #def with_scope(*args, &block) #:nodoc:
-          #options = (args.grep(Hash).first || {})[:find]
+        # def with_scope(*args, &block) #:nodoc:
+        #   options = (args.grep(Hash).first || {})[:find]
 
-          #if options && options.delete(:with_revisions)
-            #unscoped do
-              #super(*args, &block)
-            #end
-          #else
-            #super(*args, &block)
-          #end
-        #end
+        #   if options && options.delete(:with_revisions)
+        #     unscoped do
+        #       super(*args, &block)
+        #     end
+        #   else
+        #     super(*args, &block)
+        #   end
+        # end
 
-        # acts_as_revisable's override for find that allows for
-        # including revisions in the find.
-        #
-        # ==== Example
-        #
-        #   find(:all, :with_revisions => true)
-        #def find(*args) #:nodoc:
-          #options = args.grep(Hash).first
+        # # acts_as_revisable's override for find that allows for
+        # # including revisions in the find.
+        # #
+        # # ==== Example
+        # #
+        # #   find(:all, :with_revisions => true)
+        # def find(*args) #:nodoc:
+        #   options = args.grep(Hash).first
 
-          #if options && options.delete(:with_revisions)
-            #unscoped do
-              #super(*args)
-            #end
-          #else
-            #super(*args)
-          #end
-        #end
+        #   if options && options.delete(:with_revisions)
+        #     unscoped do
+        #       super(*args)
+        #     end
+        #   else
+        #     super(*args)
+        #   end
+        # end
 
         # Returns the +revision_class_name+ as configured in
         # +acts_as_revisable+.
