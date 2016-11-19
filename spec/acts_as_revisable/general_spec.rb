@@ -85,8 +85,8 @@ describe WithoutScope::ActsAsRevisable do
 
   describe "with multiple revisions" do
     before(:each) do
-      @project.update_attribute(:name, "Stephen")
-      @project.update_attribute(:name, "Michael")
+      @project.update(name: "Stephen")
+      @project.update(name: "Michael")
     end
 
     it "should have a revision_number of two" do

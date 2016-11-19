@@ -24,7 +24,7 @@ module WithoutScope
           before_create :revision_setup
           after_create :grab_my_branches
 
-          scope :deleted, -> { where("? is not null", :revisable_deleted_at) }
+          scope :deleted, -> { where.not(revisable_deleted_at: nil) }
 
           [:current_revision, revisable_association_name.to_sym].each do |a|
             belongs_to a, class_name: revisable_class_name, foreign_key: :revisable_original_id
@@ -34,7 +34,7 @@ module WithoutScope
             # Jumping through hoops here to try and make sure the
             # :finder_sql is cross-database compatible. :finder_sql
             # in a plugin is evil but, I see no other option.
-            has_many a.first, -> { where("select * from #{quoted_table_name} where #{quote_bound_value(:revisable_original_id)} = \#{revisable_original_id} and #{quote_bound_value(:revisable_number)} #{a.last} \#{revisable_number} and #{quote_bound_value(:revisable_is_current)} = #{quote_value(false)} order by #{quote_bound_value(:revisable_number)} #{(a.last == '<' ? 'DESC' : 'ASC')}") }, class_name: revision_class_name
+            has_many a.first, -> { where("select * from #{quoted_table_name} where #{quote_bound_value(:revisable_original_id)} = \#{revisable_original_id} and #{quote_bound_value(:revisable_number)} #{a.last} \#{revisable_number} and #{quote_bound_value(:revisable_is_current)} = #{quote_value(false)} order by #{quote_bound_value(:revisable_number)} #{(a.last.eql?('<') ? 'DESC' : 'ASC')}") }, class_name: revision_class_name
           end
         end
       end
@@ -45,16 +45,19 @@ module WithoutScope
 
       # Return the revision prior to this one.
       def previous_revision
-        self.class.where(
-          :revisable_original_id => revisable_original_id,
-          :revisable_number => revisable_number - 1
-        ).limit(1)
+        self.class.find_by(
+          revisable_original_id: revisable_original_id,
+          revisable_number: revisable_number - 1
+        )
       end
 
       # Return the revision after this one.
       # TODO: Update to new syntax
       def next_revision
-        self.class.find(:first, :conditions => {:revisable_original_id => revisable_original_id, :revisable_number => revisable_number + 1})
+        self.class.find_by(
+          revisable_original_id: revisable_original_id,
+          revisable_number: revisable_number + 1
+        )
       end
 
       # Setter for revisable_name just to make external API more pleasant.
@@ -71,7 +74,7 @@ module WithoutScope
       def revision_setup #:nodoc:
         now = Time.current
         prev = current_revision.revisions.first
-        prev.update_attribute(:revisable_revised_at, now) if prev
+        prev.update(revisable_revised_at: now) if prev
         self[:revisable_current_at] = now + 1.second
         self[:revisable_is_current] = false
         self[:revisable_branched_from_id] = current_revision[:revisable_branched_from_id]
@@ -134,17 +137,18 @@ module WithoutScope
         def revision_cloned_associations #:nodoc:
           clone_associations = self.revisable_options.clone_associations
 
-          self.revisable_cloned_associations ||= if clone_associations.blank?
-            []
-          elsif clone_associations.eql? :all
-            revisable_class.reflect_on_all_associations.map(&:name)
-          elsif clone_associations.is_a? [].class
-            clone_associations
-          elsif clone_associations[:only]
-            [clone_associations[:only]].flatten
-          elsif clone_associations[:except]
-            revisable_class.reflect_on_all_associations.map(&:name) - [clone_associations[:except]].flatten
-          end
+          self.revisable_cloned_associations ||= \
+            if clone_associations.blank?
+              []
+            elsif clone_associations.eql? :all
+              revisable_class.reflect_on_all_associations.map(&:name)
+            elsif clone_associations.is_a? [].class
+              clone_associations
+            elsif clone_associations[:only]
+              [clone_associations[:only]].flatten
+            elsif clone_associations[:except]
+              revisable_class.reflect_on_all_associations.map(&:name) - [clone_associations[:except]].flatten
+            end
         end
       end
     end

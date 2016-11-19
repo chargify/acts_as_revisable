@@ -80,16 +80,13 @@ module WithoutScope
         when :previous, :last
           revisions.first
         when Time
-          revisions.where(
-            ":revised_at >= :by and :current_at <= :by", {
-              :revised_at => :revisable_revised_at,
-              :by         => by,
-              :current_at => :revisable_current_at
-          }).first
+          revisions.find_by(
+            "revisable_revised_at >= ? AND revisable_current_at <= ?", by
+          )
         when self.revisable_number
           self
         else
-          revisions.where(:revisable_number => by).first
+          revisions.find_by(revisable_number: by)
         end
       end
 
@@ -153,7 +150,7 @@ module WithoutScope
       #   revert_to(:without_revision => true)
       def revert_to_without_revision(*args)
         options = args.extract_options!
-        options.update({:without_revision => true})
+        options.update(without_revision: true)
         revert_to(*(args << options))
       end
 
@@ -161,7 +158,7 @@ module WithoutScope
       #   revert_to!(:without_revision => true)
       def revert_to_without_revision!(*args)
         options = args.extract_options!
-        options.update({:without_revision => true})
+        options.update(without_revision: true)
         revert_to!(*(args << options))
       end
 
@@ -177,7 +174,7 @@ module WithoutScope
       end
 
       # Sets whether or not to force a revision.
-      def force_revision!(val=true) #:nodoc:
+      def force_revision!(val = true) #:nodoc:
         set_revisable_state(:force_revision, val)
       end
 
@@ -187,7 +184,7 @@ module WithoutScope
       end
 
       # Sets whether or not a revision should be created.
-      def no_revision!(val=true) #:nodoc:
+      def no_revision!(val = true) #:nodoc:
         set_revisable_state(:no_revision, val)
       end
 
