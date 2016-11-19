@@ -18,24 +18,37 @@ module WithoutScope
 
         base.instance_eval do
           self.table_name = revisable_class.table_name
-          default_scope { where(revisable_is_current: false) }
 
           define_callbacks :before_restore, :after_restore
           before_create :revision_setup
           after_create :grab_my_branches
 
-          scope :deleted, -> { where.not(revisable_deleted_at: nil) }
-
           [:current_revision, revisable_association_name.to_sym].each do |a|
             belongs_to a, class_name: revisable_class_name, foreign_key: :revisable_original_id
           end
 
-          [[:ancestors, '<'], [:descendants, '>']].each do |a|
-            # Jumping through hoops here to try and make sure the
-            # :finder_sql is cross-database compatible. :finder_sql
-            # in a plugin is evil but, I see no other option.
-            has_many a.first, -> { where("select * from #{quoted_table_name} where #{quote_bound_value(:revisable_original_id)} = \#{revisable_original_id} and #{quote_bound_value(:revisable_number)} #{a.last} \#{revisable_number} and #{quote_bound_value(:revisable_is_current)} = #{quote_value(false)} order by #{quote_bound_value(:revisable_number)} #{(a.last.eql?('<') ? 'DESC' : 'ASC')}") }, class_name: revision_class_name
-          end
+          has_many  :ancestors,
+                    -> (object) {
+                      associated_revisions(object).
+                        where('revisable_number < ?', object.revisable_number).
+                        order(revisable_number: :desc)
+                    },
+                    class_name: revision_class_name
+          has_many  :descendants,
+                    -> (object) {
+                      associated_revisions(object).
+                        where('revisable_number > ?', object.revisable_number).
+                        order(revisable_number: :asc)
+                    },
+                    class_name: revision_class_name
+
+          default_scope { where(revisable_is_current: false) }
+          scope :associated_revisions,
+                -> (object) {
+                  where(revisable_original_id: object.revisable_original_id).
+                    where(revisable_is_current: false)
+                }
+          scope :deleted, -> { where.not(revisable_deleted_at: nil) }
         end
       end
 
