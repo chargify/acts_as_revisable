@@ -1,6 +1,5 @@
 module WithoutScope
   module ActsAsRevisable
-
     # This module is mixed into the revision classes.
     #
     # ==== Callbacks
