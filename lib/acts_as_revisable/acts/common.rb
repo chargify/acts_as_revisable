@@ -183,8 +183,7 @@ module WithoutScope
         # return the appropriate type of model based on whether
         # or not the record is the current record.
         def instantiate(record, column_types = {}) #:nodoc:
-          is_current = columns_hash["revisable_is_current"].type_cast_for_database(
-                record["revisable_is_current"])
+          is_current = columns_hash["revisable_is_current"].type_cast_from_database(record["revisable_is_current"])
 
           if (is_current && self == self.revisable_class) || (!is_current && self == self.revision_class)
             return super(record, column_types)
