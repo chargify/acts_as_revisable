@@ -6,8 +6,8 @@ describe WithoutScope::ActsAsRevisable do
   end
 
   before(:each) do
-    @project = Project.create(:name => "Rich", :notes => "this plugin's author")
-    @post = Post.create(:name => 'a name')
+    @project = Project.create(name: "Rich", notes: "this plugin's author")
+    @post = Post.create(name: 'a name')
   end
 
   describe "with auto-detected revision class" do
