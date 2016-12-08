@@ -57,7 +57,7 @@ module WithoutScope
       def branch(*args, &block)
         is_branching!
 
-        unless run_callbacks(:before_branch)
+        unless run_callbacks(:before_branch).nil?
           raise ActiveRecord::RecordNotSaved
         end
 
@@ -99,11 +99,10 @@ module WithoutScope
       end
 
       def branch_source
-        self[:branch_source] ||= if self[:revisable_branched_from_id]
-          self.class.where(:id => self[:revisable_branched_from_id]).with_revisions
-        else
-          nil
-        end
+        @branch_source ||= \
+          if revisable_branched_from_id
+            self.class.where(id: revisable_branched_from_id).with_revisions
+          end
       end
 
       # Returns true if the _record_ (not just this instance
@@ -183,22 +182,22 @@ module WithoutScope
         # acts_as_revisable's override for instantiate so we can
         # return the appropriate type of model based on whether
         # or not the record is the current record.
-        def instantiate(record, column_types = {}) #:nodoc:
-          is_current = columns_hash["revisable_is_current"].type_cast(
-                record["revisable_is_current"])
+        def instantiate(attributes, column_types = {}) #:nodoc:
+          is_current = columns_hash["revisable_is_current"].type_cast_from_database(attributes["revisable_is_current"])
 
-          if (is_current && self == self.revisable_class) || (!is_current && self == self.revision_class)
-            return super(record, column_types)
+          if (is_current && self == revisable_class) || (!is_current && self == revision_class)
+            return super(attributes, column_types)
           end
 
-          object = if is_current
-            self.revisable_class
-          else
-            self.revision_class
-          end.allocate
+          klass = \
+            if is_current
+              revisable_class
+            else
+              revision_class
+            end
 
-          object.instance_variable_set("@attributes", record)
-          object.instance_variable_set("@attributes_cache", Hash.new)
+          attributes = klass.attributes_builder.build_from_database(attributes, column_types)
+          object = klass.allocate.init_with('attributes' => attributes, 'new_record' => false)
 
           if object.respond_to_without_attributes?(:after_find)
             object.send(:callback, :after_find)

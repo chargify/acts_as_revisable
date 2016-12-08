@@ -1,6 +1,5 @@
 module WithoutScope
   module ActsAsRevisable
-
     # This module is mixed into the revision classes.
     #
     # ==== Callbacks
@@ -27,18 +26,24 @@ module WithoutScope
         base.instance_eval do
           attr_accessor :revisable_new_params, :revisable_revision
 
-          define_callbacks :before_revise, :after_revise, :before_revert, :after_revert, :before_changeset, :after_changeset, :after_branch_created
+          define_callbacks  :before_revise, :after_revise,
+                            :before_revert, :after_revert,
+                            :before_changeset, :after_changeset,
+                            :after_branch_created
 
           before_create :before_revisable_create
           before_update :before_revisable_update
-          after_update :after_revisable_update
-          after_save :clear_revisable_shared_objects!, :unless => :is_reverting?
+          after_update  :after_revisable_update
+          after_save    :clear_revisable_shared_objects!, unless: :is_reverting?
+
+          has_many  :revisions,
+                    -> { order(revisable_number: :desc) },
+                    (revisable_options.revision_association_options || {}).merge(class_name: revision_class_name, foreign_key: :revisable_original_id, dependent: :destroy)
+          has_many  revisions_association_name.to_sym,
+                    -> { order(revisable_number: :desc) },
+                    (revisable_options.revision_association_options || {}).merge(class_name: revision_class_name, foreign_key: :revisable_original_id, dependent: :destroy)
 
           default_scope { where(revisable_is_current: true) }
-
-          [:revisions, revisions_association_name.to_sym].each do |assoc|
-            has_many assoc, -> { order("#{quoted_table_name}.#{connection.quote_column_name(:revisable_number)} DESC") }, (revisable_options.revision_association_options || {}).merge(class_name: revision_class_name, foreign_key: :revisable_original_id, dependent: :destroy)
-          end
         end
 
         if !Object.const_defined?(base.revision_class_name) && base.revisable_options.generate_revision_class?
@@ -80,16 +85,13 @@ module WithoutScope
         when :previous, :last
           revisions.first
         when Time
-          revisions.where(
-            ":revised_at >= :by and :current_at <= :by", {
-              :revised_at => :revisable_revised_at,
-              :by         => by,
-              :current_at => :revisable_current_at
-          }).first
+          revisions.find_by(
+            "revisable_revised_at >= ? AND revisable_current_at <= ?", by
+          )
         when self.revisable_number
           self
         else
-          revisions.where(:revisable_number => by).first
+          revisions.find_by(revisable_number: by)
         end
       end
 
@@ -112,7 +114,7 @@ module WithoutScope
       def revert_to(what, *args, &block) #:yields:
         is_reverting!
 
-        unless run_callbacks(:before_revert)
+        unless run_callbacks(:before_revert).nil?
           raise ActiveRecord::RecordNotSaved
         end
 
@@ -121,7 +123,7 @@ module WithoutScope
         rev = find_revision(what)
         self.reverting_to, self.reverting_from = rev, self
 
-        unless rev.run_callbacks(:before_restore)
+        unless rev.run_callbacks(:before_restore).nil?
           raise ActiveRecord::RecordNotSaved
         end
 
@@ -153,7 +155,7 @@ module WithoutScope
       #   revert_to(:without_revision => true)
       def revert_to_without_revision(*args)
         options = args.extract_options!
-        options.update({:without_revision => true})
+        options.update(without_revision: true)
         revert_to(*(args << options))
       end
 
@@ -161,7 +163,7 @@ module WithoutScope
       #   revert_to!(:without_revision => true)
       def revert_to_without_revision!(*args)
         options = args.extract_options!
-        options.update({:without_revision => true})
+        options.update(without_revision: true)
         revert_to!(*(args << options))
       end
 
@@ -177,7 +179,7 @@ module WithoutScope
       end
 
       # Sets whether or not to force a revision.
-      def force_revision!(val=true) #:nodoc:
+      def force_revision!(val = true) #:nodoc:
         set_revisable_state(:force_revision, val)
       end
 
@@ -187,7 +189,7 @@ module WithoutScope
       end
 
       # Sets whether or not a revision should be created.
-      def no_revision!(val=true) #:nodoc:
+      def no_revision!(val = true) #:nodoc:
         set_revisable_state(:no_revision, val)
       end
 
@@ -319,7 +321,7 @@ module WithoutScope
         return unless should_revise?
         in_revision!
 
-        unless run_callbacks(:before_revise)
+        unless run_callbacks(:before_revise).nil?
           in_revision!(false)
           return false
         end
@@ -352,7 +354,7 @@ module WithoutScope
       # Manages the internal state of a +Revisable+ controlling
       # whether or not a record is being revised. This works across
       # instances and is keyed on primary_key.
-      def in_revision!(val=true) #:nodoc:
+      def in_revision!(val = true) #:nodoc:
         set_revisable_state(:revision, val)
       end
 
@@ -413,48 +415,47 @@ module WithoutScope
 
       module ClassMethods
         def with_revisions
-          #TODO: something like:
+          # TODO: something like:
           # self.revision_class.where(self.current_scope)
 
-          if scope = self.current_scope
+          if scope = current_scope
             conditions = scope.where_values_hash
-            conditions.delete(:revisable_is_current) if conditions.has_key?(:revisable_is_current)
-            scope + self.revision_class.where(conditions)
+            conditions.delete("revisable_is_current") if conditions.has_key?("revisable_is_current")
+            scope + revision_class.where(conditions)
           else
             self
           end
-
         end
 
-        #def with_scope(*args, &block) #:nodoc:
-          #options = (args.grep(Hash).first || {})[:find]
+        # def with_scope(*args, &block) #:nodoc:
+        #   options = (args.grep(Hash).first || {})[:find]
 
-          #if options && options.delete(:with_revisions)
-            #unscoped do
-              #super(*args, &block)
-            #end
-          #else
-            #super(*args, &block)
-          #end
-        #end
+        #   if options && options.delete(:with_revisions)
+        #     unscoped do
+        #       super(*args, &block)
+        #     end
+        #   else
+        #     super(*args, &block)
+        #   end
+        # end
 
-        # acts_as_revisable's override for find that allows for
-        # including revisions in the find.
-        #
-        # ==== Example
-        #
-        #   find(:all, :with_revisions => true)
-        #def find(*args) #:nodoc:
-          #options = args.grep(Hash).first
+        # # acts_as_revisable's override for find that allows for
+        # # including revisions in the find.
+        # #
+        # # ==== Example
+        # #
+        # #   find(:all, :with_revisions => true)
+        # def find(*args) #:nodoc:
+        #   options = args.grep(Hash).first
 
-          #if options && options.delete(:with_revisions)
-            #unscoped do
-              #super(*args)
-            #end
-          #else
-            #super(*args)
-          #end
-        #end
+        #   if options && options.delete(:with_revisions)
+        #     unscoped do
+        #       super(*args)
+        #     end
+        #   else
+        #     super(*args)
+        #   end
+        # end
 
         # Returns the +revision_class_name+ as configured in
         # +acts_as_revisable+.

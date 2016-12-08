@@ -29,7 +29,7 @@ def setup_db
       t.boolean :revisable_is_current
       t.integer :revisable_original_id, :revisable_branched_from_id, :revisable_number, :project_id
       t.datetime :revisable_current_at, :revisable_revised_at, :revisable_deleted_at
-      t.timestamps
+      t.timestamps null: false
     end
 
     create_table :projects do |t|
@@ -38,7 +38,7 @@ def setup_db
       t.boolean :revisable_is_current
       t.integer :revisable_original_id, :revisable_branched_from_id, :revisable_number
       t.datetime :revisable_current_at, :revisable_revised_at, :revisable_deleted_at
-      t.timestamps
+      t.timestamps null: false
     end
 
     create_table :foos do |t|
@@ -47,7 +47,7 @@ def setup_db
       t.boolean :revisable_is_current
       t.integer :revisable_original_id, :revisable_branched_from_id, :revisable_number, :project_id
       t.datetime :revisable_current_at, :revisable_revised_at, :revisable_deleted_at
-      t.timestamps
+      t.timestamps null: false
     end
 
     create_table :posts do |t|
@@ -55,7 +55,7 @@ def setup_db
       t.boolean :revisable_is_current
       t.integer :revisable_original_id, :revisable_branched_from_id, :revisable_number
       t.datetime :revisable_current_at, :revisable_revised_at, :revisable_deleted_at
-      t.timestamps
+      t.timestamps null: false
     end
   end
 end
@@ -101,13 +101,13 @@ class Session < ActiveRecord::Base
 end
 
 class Foo < ActiveRecord::Base
-  acts_as_revisable :generate_revision_class => true, :no_validation_scoping => true
+  acts_as_revisable generate_revision_class: true, no_validation_scoping: true
 
   validates_uniqueness_of :name
 end
 
 class Post < ActiveRecord::Base
-  acts_as_revisable 
+  acts_as_revisable
 
   validates_uniqueness_of :name
 end
