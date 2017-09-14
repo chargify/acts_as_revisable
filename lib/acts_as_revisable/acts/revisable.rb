@@ -321,7 +321,7 @@ module WithoutScope
         return unless should_revise?
         in_revision!
 
-        unless run_callbacks(:before_revise).nil?
+        if run_callbacks(:before_revise) == false
           in_revision!(false)
           return false
         end
